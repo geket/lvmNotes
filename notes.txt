@@ -1,13 +1,60 @@
 # Shrink LVM partitions
-# I use this in order to backup my distro to smaller drives
+## I use this in order to backup my distro to smaller drives
 sudo apt-get install lvm2
 e2fsck -f /dev/yourVG/yourLV 
 resize2fs /dev/yourVG/yourLV 150G
 lvreduce -L -50G /dev/yourVG/yourLV
 
-# Optional, you can now use dd to clone the drive
-# PAY ATTENTION WHEN USING DD
-# DO NOT SET THE OUTPUT DRIVE AS THE INPUT DRIVE
-# I HAVE DONE THIS BEFORE AND IT IS PAINFUL
-# ALWAYS TRIPLE CHECK YOUR DD PARAMETERS BEFORE EXECUTING
-sudo dd if=/dev/sda of=/dev/sdb1 bs=64K conv=noerror,sync status=progress
+# Create the partitions to mirror the drive you wish to backup
+## There two ways to do this now, you can either create the partitions with lvcreate or gparted
+### If you already set up the LV, you can use gparted
+### Create regular ext4s that match the size of your source drive
+### In my case I had to make a /boot, /boot/efi and primary partition
+### You would create:
+### One 512MiB partition for /boot/efi
+### One 488MiB partition for /boot
+### One partition for you volume group, typically using the rest of the drive
+### You will end up dd'ing to these as the OUTPUT(of=/*), NOT the INPUT(if=/*)
+### You may want to leave extra space unallocated for a seperate partition for say, another root or dual booting Windows. 
+
+## I will now be going over how to create a logical volume in the case that you do not know how
+### Please, if you already created the LVM, skip this step so you do not do any unnecessary work
+### You can simply follow the gparted instructions above
+### Scan disks with LVM
+lvmdiskscan
+
+### Create a new physical volume
+pvcreate /dev/mapper/*
+
+### Double check
+pvdisplay
+
+### Create a new volume group
+vgcreate gentoo /dev/mapper/gentoo
+vgdisplay
+
+### Create the partitions, you may not need a swap, var, root or home partition
+### This depends on how you installed, if you selected seperate partitions make sure you compensate
+### I use 80G for an example but depending on your needs you may need larger partitions.
+### If you would like you could also make a smaller or larger swap
+lvcreate -C y -L 16G * -n swap
+lvcreate -L 80G * -n root
+lvcreate -L 80G * -n var
+lvcreate -l +100%FREE * -n home
+
+### Check and see if this logical volume is what you want
+lvdisplay
+
+# You can now use dd to clone the drive
+## PAY ATTENTION WHEN USING DD
+### DO NOT SET THE OUTPUT DRIVE AS THE INPUT DRIVE
+### I HAVE DONE THIS BEFORE AND IT IS PAINFUL
+### ALWAYS TRIPLE CHECK YOUR DD PARAMETERS BEFORE EXECUTING
+### Make sure you output to the partitions you created with Gparted above
+### These would be the 512MiB /boot/efi, 488MiB /boot 
+### As well as the volume group which takes up however much you allocated to it
+### Replace with the original as input for the boot directory
+## Delete the & symbol
+### & sudo dd if= of= bs=64K conv=noerror,sync status=progress
+### & sudo dd if= of= bs=64K conv=noerror,sync status=progress
+### & sudo dd if= of= bs=64K conv=noerror,sync status=progress
