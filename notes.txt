@@ -1,0 +1,13 @@
+# Shrink LVM partitions
+# I use this in order to backup my distro to smaller drives
+sudo apt-get install lvm2
+e2fsck -f /dev/yourVG/yourLV 
+resize2fs /dev/yourVG/yourLV 150G
+lvreduce -L -50G /dev/yourVG/yourLV
+
+# Optional, you can now use dd to clone the drive
+# PAY ATTENTION WHEN USING DD
+# DO NOT SET THE OUTPUT DRIVE AS THE INPUT DRIVE
+# I HAVE DONE THIS BEFORE AND IT IS PAINFUL
+# ALWAYS TRIPLE CHECK YOUR DD PARAMETERS BEFORE EXECUTING
+sudo dd if=/dev/sda of=/dev/sdb1 bs=64K conv=noerror,sync status=progress
